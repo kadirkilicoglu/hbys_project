@@ -1,7 +1,7 @@
 // src/pages/HbysDashboard.jsx
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api";
-import Navbar from "../components/NavbarOverlay";
+import Navbar from "../components/NavbarOverlay"; // ✅ Hamburger overlay navbar geri eklendi
 
 const DURUM = ["BEKLIYOR", "MUAYENEDE", "TAMAMLANDI", "IPTAL"];
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -12,12 +12,13 @@ export default function HbysDashboard() {
   const [patients, setPatients] = useState([]);
   const [appts, setAppts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [week, setWeek] = useState([]);
 
   // Filtreler
   const [date, setDate] = useState(todayISO());
-  const [clinicId, setClinicId] = useState(""); // "" => Tümü
-  const [doctorId, setDoctorId] = useState(""); // "" => Tümü
-  const [statusFilter, setStatusFilter] = useState(""); // "" => Tümü
+  const [clinicId, setClinicId] = useState("");
+  const [doctorId, setDoctorId] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   // Form
   const [form, setForm] = useState({
@@ -31,27 +32,23 @@ export default function HbysDashboard() {
   });
   const [editingId, setEditingId] = useState("");
 
-  // --- Referans verileri yükle + preselect hasta ---
+  // Referanslar
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
         const [c, p] = await Promise.all([api.clinics(), api.patients()]);
         setClinics(c || []);
-
         const list = Array.isArray(p) ? p : [p].filter(Boolean);
         setPatients(list);
 
-        // URL ile gelen ?selectPatient=12345678901
         const params = new URLSearchParams(window.location.search);
         const preselect = params.get("selectPatient");
         if (preselect) {
           const found = list.find(
             (x) => x.id === preselect || x.tckn === preselect
           );
-          if (found) {
-            setForm((f) => ({ ...f, patientId: found.id }));
-          }
+          if (found) setForm((f) => ({ ...f, patientId: found.id }));
         }
       } finally {
         setLoading(false);
@@ -59,7 +56,6 @@ export default function HbysDashboard() {
     })();
   }, []);
 
-  // Sekme tekrar görünür olursa hastaları tazele (hasta ekle sayfasından geri gelince)
   useEffect(() => {
     const onVis = () => {
       if (document.visibilityState === "visible") {
@@ -73,7 +69,7 @@ export default function HbysDashboard() {
     return () => document.removeEventListener("visibilitychange", onVis);
   }, []);
 
-  // Klinik değişince hekimleri çek
+  // Klinik -> Doktor
   useEffect(() => {
     (async () => {
       if (!clinicId) {
@@ -89,7 +85,7 @@ export default function HbysDashboard() {
     })();
   }, [clinicId]);
 
-  // Randevuları getir
+  // Günlük liste
   const loadAppts = async () => {
     setLoading(true);
     try {
@@ -110,6 +106,40 @@ export default function HbysDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clinicId, doctorId, date, statusFilter]);
 
+  // Son 7 gün grafiği
+  useEffect(() => {
+    (async () => {
+      const trDays = ["Pz", "Pt", "Sa", "Ça", "Pe", "Cu", "Ct"];
+      const days = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - (6 - i));
+        return {
+          dateISO: d.toISOString().slice(0, 10),
+          label: trDays[d.getDay()],
+        };
+      });
+      const results = await Promise.all(
+        days.map(({ dateISO }) =>
+          api
+            .apptsList({
+              date: dateISO,
+              clinicId: clinicId || undefined,
+              doctorId: doctorId || undefined,
+              status: statusFilter || undefined,
+            })
+            .catch(() => [])
+        )
+      );
+      setWeek(
+        days.map((d, i) => ({
+          date: d.dateISO,
+          label: d.label,
+          count: Array.isArray(results[i]) ? results[i].length : 0,
+        }))
+      );
+    })();
+  }, [clinicId, doctorId, statusFilter]);
+
   // İstatistikler
   const stats = useMemo(() => {
     const by = (s) => appts.filter((a) => a.durum === s).length;
@@ -122,7 +152,7 @@ export default function HbysDashboard() {
     };
   }, [appts]);
 
-  // Submit (tek tık)
+  // Submit
   const onSubmit = async (e) => {
     e.preventDefault();
     if (!form.patientId || !form.clinicId || !form.doctorId) {
@@ -140,10 +170,9 @@ export default function HbysDashboard() {
       } else {
         await api.apptCreate(form);
       }
-      await loadAppts(); // önce listeyi yenile
+      await loadAppts();
       setForm((f) => ({
         ...f,
-        // istersen hasta seçimi kalsın:
         patientId: f.patientId,
         clinicId,
         doctorId,
@@ -192,7 +221,7 @@ export default function HbysDashboard() {
     setAppts((prev) => prev.map((x) => (x.id === id ? { ...x, durum } : x)));
   };
 
-  // UI helpers
+  // Görsel yardımcılar
   const badgeCls = (s) =>
     ({
       BEKLIYOR: "bg-amber-500/20 text-amber-100 border border-amber-500/30",
@@ -202,7 +231,6 @@ export default function HbysDashboard() {
       IPTAL: "bg-red-500/20 text-red-100 border border-red-500/30",
     }[s] ?? "bg-slate-500/20 text-slate-100 border border-slate-500/30");
 
-  // Butonlar
   const btn =
     "px-3 py-1.5 rounded-lg text-white text-xs font-medium transition-all duration-200";
   const btnBlue = `${btn} bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-500/30`;
@@ -213,114 +241,127 @@ export default function HbysDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-600 via-emerald-700 to-teal-600">
-      <Navbar />
+      <Navbar /> {/* ✅ Hamburger çizgi menü burada */}
+      <div className="max-w-7xl mx-auto px-4 py-6 text-white">
+        {/* Başlık */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-white grid place-items-center shadow-lg">
+              <div className="w-7 h-7 rounded-md bg-emerald-600" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-extrabold leading-tight">
+                HBYS — Randevu &amp; Sıra Takip
+              </h1>
+              <p className="text-white/80 text-sm">
+                Günlük randevuları takip edin, hızlıca yeni kayıt oluşturun.
+              </p>
+            </div>
+          </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-white mb-2">
-            Randevu Oluştur
-          </h1>
-          <div className="bg-emerald-500/20 backdrop-blur-sm border border-emerald-400/30 rounded-2xl px-4 py-3">
-            <p className="text-emerald-100 text-sm">
-              <strong>Not:</strong> Yeni hasta eklemek için menüden{" "}
-              <strong>"Hasta Ekle"</strong> sayfasını kullanın. Kayıt sonrası,
-              adres satırındaki{" "}
-              <code className="bg-emerald-400/20 px-1 rounded">TCKN</code> ile
-              hasta otomatik seçilir.
-            </p>
+          {/* Sağ üst "Yeni Hasta / Hastalar" butonları YOK */}
+        </div>
+
+        {/* Filtreler + İstatistik + Graf */}
+        <div className="grid lg:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white/10 backdrop-blur-sm rounded-3xl border border-white/20 p-5">
+            <h2 className="text-lg font-semibold mb-4">Filtreler</h2>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-white/90 text-sm mb-2">
+                  Tarih
+                </label>
+                <input
+                  type="date"
+                  className="w-full bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-400/50"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-white/90 text-sm mb-2">
+                  Durum
+                </label>
+                <select
+                  className="w-full bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-400/50"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="" className="bg-green-800">
+                    Tümü
+                  </option>
+                  {DURUM.map((s) => (
+                    <option key={s} value={s} className="bg-green-800">
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-white/90 text-sm mb-2">
+                  Klinik
+                </label>
+                <select
+                  className="w-full bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-400/50"
+                  value={clinicId}
+                  onChange={(e) => setClinicId(e.target.value)}
+                >
+                  <option value="" className="bg-green-800">
+                    Tümü
+                  </option>
+                  {clinics.map((c) => (
+                    <option key={c.id} value={c.id} className="bg-green-800">
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-white/90 text-sm mb-2">
+                  Hekim
+                </label>
+                <select
+                  className="w-full bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-400/50"
+                  value={doctorId}
+                  onChange={(e) => setDoctorId(e.target.value)}
+                  disabled={!clinicId}
+                >
+                  <option value="" className="bg-green-800">
+                    Tümü
+                  </option>
+                  {doctors.map((d) => (
+                    <option key={d.id} value={d.id} className="bg-green-800">
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Stat title="Toplam" value={stats.total} />
+              <Stat title="Bekleyen" value={stats.waiting} />
+              <Stat title="Muayenede" value={stats.inExam} />
+              <Stat title="Tamamlandı" value={stats.done} />
+            </div>
+
+            <div className="mt-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-semibold">Son 7 Gün Gelen Hasta</div>
+                <div className="text-white/70 text-xs">Filtrelere göre</div>
+              </div>
+              <WeeklyChart data={week} />
+            </div>
           </div>
         </div>
 
-        {/* Filtreler */}
-        <div className="grid md:grid-cols-4 gap-4 mb-6">
-          <div>
-            <label className="block text-white/90 font-medium mb-2">
-              Tarih
-            </label>
-            <input
-              type="date"
-              className="w-full bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-400/50"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="block text-white/90 font-medium mb-2">
-              Klinik
-            </label>
-            <select
-              className="w-full bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-400/50"
-              value={clinicId}
-              onChange={(e) => setClinicId(e.target.value)}
-            >
-              <option value="" className="bg-green-800">
-                Tümü
-              </option>
-              {clinics.map((c) => (
-                <option key={c.id} value={c.id} className="bg-green-800">
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-white/90 font-medium mb-2">
-              Hekim
-            </label>
-            <select
-              className="w-full bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-400/50"
-              value={doctorId}
-              onChange={(e) => setDoctorId(e.target.value)}
-              disabled={!clinicId}
-            >
-              <option value="" className="bg-green-800">
-                Tümü
-              </option>
-              {doctors.map((d) => (
-                <option key={d.id} value={d.id} className="bg-green-800">
-                  {d.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-white/90 font-medium mb-2">
-              Durum
-            </label>
-            <select
-              className="w-full bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-400/50"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="" className="bg-green-800">
-                Tümü
-              </option>
-              {DURUM.map((s) => (
-                <option key={s} value={s} className="bg-green-800">
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* İstatistikler */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <Stat title="Toplam" value={stats.total} />
-          <Stat title="Bekleyen" value={stats.waiting} />
-          <Stat title="Muayenede" value={stats.inExam} />
-          <Stat title="Tamamlandı" value={stats.done} />
-        </div>
-
-        {/* Randevu Formu */}
+        {/* Form */}
         <div className="bg-white/10 backdrop-blur-sm rounded-3xl border border-white/20 shadow-2xl p-6 mb-8">
           <h2 className="text-xl font-bold text-white mb-4">
             {editingId ? "Randevu Düzenle" : "Yeni Randevu"}
           </h2>
-
           <form onSubmit={onSubmit}>
             <div className="grid md:grid-cols-3 gap-4 mb-6">
               <div>
@@ -484,7 +525,6 @@ export default function HbysDashboard() {
         {/* Liste */}
         <div className="bg-white/10 backdrop-blur-sm rounded-3xl border border-white/20 shadow-2xl p-6">
           <h2 className="text-xl font-bold text-white mb-4">Randevular</h2>
-
           <div className="overflow-x-auto">
             <table className="min-w-full">
               <thead>
@@ -578,6 +618,10 @@ export default function HbysDashboard() {
             </table>
           </div>
         </div>
+
+        <div className="mt-6 text-xs text-white/60">
+          HBYS Dashboard • haftalık hasta grafiği
+        </div>
       </div>
     </div>
   );
@@ -592,7 +636,6 @@ function Th({ children, className = "" }) {
     </th>
   );
 }
-
 function Td({ children, className = "", ...rest }) {
   return (
     <td className={`px-3 py-3 align-top ${className}`} {...rest}>
@@ -600,12 +643,67 @@ function Td({ children, className = "", ...rest }) {
     </td>
   );
 }
-
 function Stat({ title, value }) {
   return (
     <div className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 p-4 shadow-lg">
       <div className="text-sm text-white/70 mb-1">{title}</div>
       <div className="text-2xl font-bold text-white">{value}</div>
+    </div>
+  );
+}
+function WeeklyChart({ data = [] }) {
+  const W = 600,
+    H = 120,
+    P = 12;
+  const max = Math.max(1, ...data.map((d) => d.count));
+  const stepX = (W - P * 2) / Math.max(1, data.length - 1);
+  const scaleY = (v) => H - P - (v / max) * (H - P * 2);
+  const points = data
+    .map((d, i) => `${P + i * stepX},${scaleY(d.count)}`)
+    .join(" ");
+  return (
+    <div className="w-full overflow-hidden">
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="120">
+        <defs>
+          <linearGradient id="hbysLine" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#10b981" />
+            <stop offset="100%" stopColor="#34d399" />
+          </linearGradient>
+        </defs>
+        {data.length > 1 && (
+          <polyline
+            fill="none"
+            stroke="url(#hbysLine)"
+            strokeWidth="3"
+            strokeLinecap="round"
+            points={points}
+          />
+        )}
+        {data.map((d, i) => (
+          <circle
+            key={d.date}
+            cx={P + i * stepX}
+            cy={scaleY(d.count)}
+            r="3.5"
+            fill="#a7f3d0"
+          />
+        ))}
+        {data.map((d, i) => (
+          <text
+            key={d.date + "-lbl"}
+            x={P + i * stepX}
+            y={H - 2}
+            textAnchor="middle"
+            fontSize="10"
+            fill="#d1fae5"
+          >
+            {d.label}
+          </text>
+        ))}
+        <text x={W - P} y={12} textAnchor="end" fontSize="10" fill="#d1fae5">
+          max: {max}
+        </text>
+      </svg>
     </div>
   );
 }

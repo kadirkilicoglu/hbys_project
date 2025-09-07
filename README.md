@@ -1,6 +1,3 @@
-Harika 👍 O zaman README’yi güncelleyip **components/** klasörünü ve **lib/api.js** dosyasını da proje yapısına ekledim. Ayrıca sana ekran görüntülerini nasıl ekleyeceğini gösterdim. İşte güncel hali:
-
----
 
 # HBYS – Randevu & Sıra Takip Sistemi
 
@@ -133,4 +130,5 @@ Katkılarınızı bekliyorum! Fork’layabilir, PR gönderebilirsiniz.
 ## 📎 Bağlantılar
 
 🔗 GitHub Repo: [hbys\_project](https://github.com/kadirkilicoglu/hbys_project)
+
 

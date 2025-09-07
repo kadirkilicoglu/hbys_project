@@ -116,10 +116,10 @@ Frontend varsayılan olarak `http://localhost:5173` adresinde çalışır.
 
 ## 📸 Ekran Görüntüleri
 
-![Dashboard](./docs/screenshots/dashboard.png)
-![Hasta Ekle](./docs/screenshots/patient-add.png)
-![Hasta Listesi](./docs/screenshots/patient-list.png)
-![Navbar](./docs/screenshots/navbar.png)
+![Dashboard](./doc/screenshots/dashboard.png)
+![Hasta Ekle](./doc/screenshots/patient-add.png)
+![Hasta Listesi](./doc/screenshots/patient-list.png)
+![Navbar](./doc/screenshots/navbar.png)
 
 ```
 
@@ -130,5 +130,6 @@ Katkılarınızı bekliyorum! Fork’layabilir, PR gönderebilirsiniz.
 ## 📎 Bağlantılar
 
 🔗 GitHub Repo: [hbys\_project](https://github.com/kadirkilicoglu/hbys_project)
+
 
 

@@ -1,0 +1,65 @@
+// prisma/schema.prisma
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Patient {
+  /// TCKN = Primary Key (String). Uzunluk validasyonu uygulama katmanında yapılır.
+  id        String   @id
+  adSoyad   String
+  dogum     DateTime
+  cinsiyet  String
+  createdAt DateTime @default(now())
+
+  randevular Appointment[]
+}
+
+model Clinic {
+  id   String @id @default(cuid())
+  name String
+  code String @unique
+
+  doctors    Doctor[]
+  randevular Appointment[]
+}
+
+model Doctor {
+  id        String @id @default(cuid())
+  name      String
+  specialty String
+
+  clinicId String
+  clinic   Clinic @relation(fields: [clinicId], references: [id])
+
+  randevular Appointment[]
+}
+
+model Appointment {
+  id           String   @id @default(cuid())
+  randevuTarih DateTime // Gün bazında normalize (00:00)
+  randevuSaat  String // "HH:MM"
+  durum        String // "BEKLIYOR" | "MUAYENEDE" | "TAMAMLANDI" | "IPTAL"
+  note         String?
+
+  // İlişkiler
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id])
+
+  clinicId String
+  clinic   Clinic @relation(fields: [clinicId], references: [id])
+
+  doctorId String
+  doctor   Doctor @relation(fields: [doctorId], references: [id])
+
+  // Aynı hekim, aynı gün ve aynı saat => tek kayıt
+  @@unique([doctorId, randevuTarih, randevuSaat], name: "unique_doctor_slot")
+  // Faydalı indexler
+  @@index([patientId])
+  @@index([clinicId])
+  @@index([doctorId, randevuTarih])
+}

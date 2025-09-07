@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "moduleResolution": "Bundler",
+    "module": "ESNext",
+    "esModuleInterop": true,
+    "strict": true,
+    "types": ["node"] // <— önemli
+  },
+  "include": ["src", "prisma"]
+}

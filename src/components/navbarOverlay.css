@@ -1,0 +1,198 @@
+/* components/navbarOverlay.css */
+.nav-ovl-root * {
+  box-sizing: border-box;
+}
+.nav-ovl-root .nav-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 100vw;
+  background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%);
+  clip-path: circle(30px at calc(100% - 60px) 60px);
+  transition: clip-path 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  z-index: 1000;
+}
+.nav-ovl-root .nav-overlay.open {
+  clip-path: circle(150%);
+}
+.nav-ovl-root .menu-btn {
+  position: fixed;
+  z-index: 1001;
+  right: 30px;
+  top: 30px;
+  height: 60px;
+  width: 60px;
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+  color: white;
+  cursor: pointer;
+  background: linear-gradient(135deg, #047857, #059669);
+  box-shadow: 0 8px 25px rgba(4, 120, 87, 0.3);
+  transition: transform 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+.nav-ovl-root .menu-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 12px 35px rgba(4, 120, 87, 0.5);
+}
+.nav-ovl-root .menu-btn.open {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  transform: rotate(180deg);
+}
+.nav-ovl-root .nav-menu {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  list-style: none;
+  text-align: center;
+  padding: 0;
+  margin: 0;
+}
+.nav-ovl-root .nav-menu li {
+  margin: 20px 0;
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.5s ease;
+}
+.nav-ovl-root .nav-menu li.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.nav-ovl-root .nav-link {
+  text-decoration: none;
+  font-size: 32px;
+  font-weight: 600;
+  padding: 15px 40px;
+  color: white;
+  border-radius: 50px;
+  background: rgba(0, 0, 0, 0.2);
+  position: relative;
+  line-height: 60px;
+  transition: all 0.3s ease;
+  display: inline-block;
+  border: 2px solid transparent;
+  backdrop-filter: blur(10px);
+}
+.nav-ovl-root .nav-link:before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  background: linear-gradient(45deg, #10b981, #34d399, #6ee7b7, #a7f3d0);
+  border-radius: 50px;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.nav-ovl-root .nav-link:hover:before {
+  opacity: 1;
+  animation: nav-ovl-glow 2s linear infinite;
+}
+.nav-ovl-root .nav-link:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 40px rgba(16, 185, 129, 0.4);
+}
+.nav-ovl-root .nav-link.active {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+}
+.nav-ovl-root .nav-link.active:before {
+  opacity: 1;
+}
+@keyframes nav-ovl-glow {
+  0%,
+  100% {
+    filter: hue-rotate(0deg) brightness(1);
+  }
+  50% {
+    filter: hue-rotate(180deg) brightness(1.2);
+  }
+}
+@media (max-width: 768px) {
+  .nav-ovl-root .nav-link {
+    font-size: 28px;
+    padding: 12px 30px;
+  }
+  .nav-ovl-root .menu-btn {
+    right: 20px;
+    top: 20px;
+    width: 50px;
+    height: 50px;
+  }
+}
+
+/* ===== Brand (top-left fixed) ===== */
+.nav-ovl-root .brand {
+  position: fixed;
+  z-index: 1001;
+  top: 18px;
+  left: 24px;
+}
+.nav-ovl-root .brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: #fff;
+  padding: 4px 6px;
+  border-radius: 12px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.nav-ovl-root .brand-link:hover {
+  transform: translateY(-1px);
+}
+.nav-ovl-root .logo-outer {
+  width: 48px;
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}
+.nav-ovl-root .logo-inner {
+  width: 22px;
+  height: 22px;
+  background: #059669;
+  border-radius: 6px;
+}
+.nav-ovl-root .brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+.nav-ovl-root .brand-title {
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: 0.2px;
+}
+.nav-ovl-root .brand-sub {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+/* Responsive sizes */
+@media (max-width: 768px) {
+  .nav-ovl-root .logo-outer {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+  }
+  .nav-ovl-root .logo-inner {
+    width: 20px;
+    height: 20px;
+  }
+  .nav-ovl-root .brand-title {
+    font-size: 16px;
+  }
+  .nav-ovl-root .brand-sub {
+    font-size: 11px;
+  }
+}
